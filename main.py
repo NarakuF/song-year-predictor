@@ -42,16 +42,16 @@ if __name__ == '__main__':
 
     # baseline
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
-    # reg = linear_model.LinearRegression()
+    reg = linear_model.LinearRegression()
 
     # build a ml pipeline
-    reg = make_pipeline(# PolynomialFeatures(),
+    '''reg = make_pipeline(# PolynomialFeatures(),
                         # PCA(n_components='mle'),
                         # SelectPercentile(f_regression, percentile=20),
                         StandardScaler(),
-                        neural_network.MLPRegressor())
+                        # neural_network.MLPRegressor())
                         # linear_model.SGDRegressor(penalty='l1', l1_ratio=0.8, max_iter=1000, random_state=11, learning_rate='optimal'))
-                        # linear_model.LassoCV(cv=10))
+                        linear_model.LassoCV(cv=3))'''
 
     # train
     reg.fit(X_train, y_train)
@@ -62,6 +62,18 @@ if __name__ == '__main__':
     # round predictions to integer
     # y_pred = np.around(y_pred)
     mae = mean_absolute_error(y_test, y_pred)
+    plt.scatter(y_test, y_pred)
+    plt.show()
+    min_year = np.min(y_test[:, 0])
+    max_year = np.max(y_test[:, 0])
+    y_mean = np.empty(shape=[max_year - min_year + 1, 2])
+    for i in range(min_year, max_year + 1):
+        plt.scatter(y_test[y_test[:, 0] == i], y_pred[y_test[:, 0] == i])
+        y_mean[i - min_year] = np.array([i, np.mean(y_pred[y_test[:, 0] == i]).item()])
+    plt.show()
+    plt.scatter(y_mean[:, 0], y_mean[:, 1])
+    plt.plot([min_year, max_year], [min_year, max_year])
+    plt.show()
 
     # comparisons
     # LinearRegression()                    6.760205411939791
