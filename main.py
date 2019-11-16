@@ -27,6 +27,8 @@ if __name__ == '__main__':
 
     df = pd.DataFrame(np.concatenate((X[:, :23], y), axis=1))
     df_y = pd.DataFrame(y)
+
+    # show features correlation heatmap
     # plt.figure(figsize=[80, 40])
     # sns.heatmap(df.corr(), annot=True)
     # plt.show()
@@ -34,7 +36,7 @@ if __name__ == '__main__':
     # remove the less correlated with y: index = 15, 17, 21
     # X = np.delete(X, [15, 17, 21], axis=1)
 
-
+    # show features distribution
     # plt.plot(X, y)
     # plt.show()
 
@@ -42,6 +44,7 @@ if __name__ == '__main__':
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
     # reg = linear_model.LinearRegression()
 
+    # build a ml pipeline
     reg = make_pipeline(# PolynomialFeatures(),
                         # PCA(n_components='mle'),
                         # SelectPercentile(f_regression, percentile=20),
@@ -49,10 +52,18 @@ if __name__ == '__main__':
                         neural_network.MLPRegressor())
                         # linear_model.SGDRegressor(penalty='l1', l1_ratio=0.8, max_iter=1000, random_state=11, learning_rate='optimal'))
                         # linear_model.LassoCV(cv=10))
+
+    # train
     reg.fit(X_train, y_train)
+
+    # test on the validation set
     y_pred = reg.predict(X_test)
+
+    # round predictions to integer
     # y_pred = np.around(y_pred)
     mae = mean_absolute_error(y_test, y_pred)
+
+    # comparisons
     # LinearRegression()                    6.760205411939791
     # LinearRegression() around             6.755269939510259
     # LinearRegression() StandardScaler     6.760205411939838
@@ -69,7 +80,7 @@ if __name__ == '__main__':
     # MLPRegressor()                        6.585188772812935
     print(mae)
 
-
+    # make prediction on the test set
     x_output = data['testx']
     y_output = reg.predict(x_output)
     np.savetxt('output.csv', y_output, delimiter=',')
