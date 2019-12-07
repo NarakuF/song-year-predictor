@@ -55,23 +55,26 @@ class Regressor(nn.Module):
         # self.linear = nn.Linear(input_size, output_size)
 
         self.fc_1 = nn.Linear(input_size, 128)
-        self.norm1 = nn.BatchNorm1d(128)
+        # self.norm1 = nn.BatchNorm1d(128)
         self.fc_2 = nn.Linear(128, 64)
-        self.norm2 = nn.BatchNorm1d(64)
+        # self.norm2 = nn.BatchNorm1d(64)
         self.fc_3 = nn.Linear(64, 32)
-        self.norm3 = nn.BatchNorm1d(32)
+        # self.norm3 = nn.BatchNorm1d(32)
         self.fc_4 = nn.Linear(32, output_size)
 
     def forward(self, x):
         # y = self.linear(x)
         # return y
 
-        x = self.norm1(self.fc_1(x))
-        x = F.relu(x)
-        x = self.norm2(self.fc_2(x))
-        x = F.relu(x)
-        x = self.norm3(self.fc_3(x))
-        x = F.relu(x)
+        # x = self.norm1(self.fc_1(x))
+        x = self.fc_1(x)
+        x = F.leaky_relu(x)
+        # x = self.norm2(self.fc_2(x))
+        x = self.fc_2(x)
+        x = F.leaky_relu(x)
+        # x = self.norm3(self.fc_3(x))
+        x = self.fc_3(x)
+        x = F.leaky_relu(x)
         x = self.fc_4(x)
         return x
 
@@ -95,10 +98,10 @@ def load_data(fn):
     X_test = X_test.astype(np.float32)
     X_test = scaler.transform(X_test)
 
-    params = {'batch_size': 64,
+    params = {'batch_size': 128,
               'shuffle': True,
               'num_workers': 4}
-    test_params = {'batch_size': 64,
+    test_params = {'batch_size': 128,
                    'shuffle': False,
                    'num_workers': 4}
     train_set = CustomDataset(X_train, y_train)
@@ -111,7 +114,7 @@ def load_data(fn):
     return train_loader, val_loader, test_loader
 
 
-def train(train_loader, val_loader, model, optimizer, criterion, epochs=10):
+def train(train_loader, val_loader, model, optimizer, criterion, criterion2, epochs=10):
     train_loss = []
     val_mae = []
     for epoch in range(epochs):
@@ -133,9 +136,9 @@ def train(train_loader, val_loader, model, optimizer, criterion, epochs=10):
             mean_loss = loss.item()
             train_epoch_loss.append(mean_loss)
             running_loss += mean_loss
-            if i % 1000 == 999:
+            if i % 500 == 499:
                 print('[epoch: %d, batch:  %5d] train loss: %.5f' %
-                      (epoch + 1, i + 1, running_loss / 1000.0))
+                      (epoch + 1, i + 1, running_loss / 500.0))
                 running_loss = 0.0
         train_loss.append(np.mean(train_epoch_loss))
 
@@ -167,29 +170,40 @@ def test(test_loader, model):
 
 
 def save_result(result, fn):
-    df = pd.DataFrame(result)
-    df.to_csv(fn, header=False, index=False)
+    df = pd.DataFrame.from_dict({'dataid': [i + 1 for i in range(len(result))], 'prediction': result})
+    df.to_csv(fn, index=False)
 
 
-def main(in_fn, out_fn):
+def main(in_fn, out_fn, load=False):
     train_loader, val_loader, test_loader = load_data(in_fn)
+
+    if load:
+        model = torch.load('./model.pth')
+        model = model.to(device)
+        result = test(test_loader, model)
+        save_result(result, out_fn)
+        return
 
     model = Regressor()
     model = model.to(device)
 
-    lr = 0.001
-    momentum = 0.3
-    epochs = 25
-    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+    lr = 0.01
+    momentum = 0.9
+    epochs = 20
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=0.3)
     # optimizer = optim.Adam(model.parameters(), lr=lr)
     criterion = nn.SmoothL1Loss()
-    train_loss, val_mae = train(train_loader, val_loader, model, optimizer, criterion, epochs=epochs)
+
+    criterion2 = nn.MSELoss()
+    train_loss, val_mae = train(train_loader, val_loader, model, optimizer, criterion, criterion2, epochs=epochs)
 
     plt.plot(train_loss, label='train')
     plt.plot(val_mae, label='val')
     plt.show()
     print(train_loss)
     print(val_mae)
+
+    torch.save(model, './model.pth')
 
     result = test(test_loader, model)
     save_result(result, out_fn)

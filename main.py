@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+import pandas as pd
 import seaborn as sns
 from scipy.io import loadmat
 from sklearn import linear_model
@@ -10,6 +11,7 @@ from sklearn import feature_selection
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
+from sklearn import neighbors
 from sklearn.tree import DecisionTreeRegressor
 from sklearn import ensemble
 from sklearn.decomposition import PCA
@@ -51,9 +53,9 @@ if __name__ == '__main__':
     plt.close()
     '''
 
-    #vif = [variance_inflation_factor(X, i) for i in range(X.shape[1])]
-    #print(vif)
-    vif = [0, 3, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+    # vif = [variance_inflation_factor(X, i) for i in range(X.shape[1])]
+    # print(vif)
+    # vif = [0, 3, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
     # X = np.delete(X, vif, axis=1)
 
     # baseline
@@ -64,25 +66,24 @@ if __name__ == '__main__':
     reg = make_pipeline(# PolynomialFeatures(interaction_only=True),
                         # PCA(n_components='mle'),
                         # SelectPercentile(f_regression, percentile=20),
-                        # preprocessing.MinMaxScaler(),
+                        preprocessing.StandardScaler(),
                         # feature_selection.VarianceThreshold(0.001),
-                        # SVR())
                         linear_model.LinearRegression())
                         # neural_network.MLPRegressor())
                         # linear_model.SGDRegressor(penalty='l1', l1_ratio=0.8, max_iter=1000, random_state=11, learning_rate='optimal'))
-                        # ensemble.GradientBoostingRegressor())
+                        # ensemble.VotingRegressor([('lr1', linear_model.HuberRegressor()), ('lr2', linear_model.LinearRegression()), ('lr3', linear_model.Lasso())]))
 
     # train
     # X_train = np.abs(X_train)
     # X_test = np.abs(X_test)
-    reg.fit(X_train, y_train)
+    reg.fit(X_train, np.squeeze(y_train))
 
     # test on the validation set
     y_pred = reg.predict(X_test)
 
     # round predictions to integer
     # y_pred = np.around(y_pred)
-    mae = mean_absolute_error(y_test, y_pred)
+    mae = mean_absolute_error(np.squeeze(y_test), y_pred)
     print(mae)
 
     min_year = np.min(y_test[:, 0])
@@ -115,5 +116,6 @@ if __name__ == '__main__':
     # make prediction on the test set
     x_output = data['testx']
     y_output = reg.predict(x_output)
-    np.savetxt('output.csv', y_output, delimiter=',')
+    df = pd.DataFrame.from_dict({'dataid': [i + 1 for i in range(len(y_output))], 'prediction': y_output})
+    df.to_csv('./output.csv', index=False)
 
